@@ -142,8 +142,10 @@ class DataSequential(Dataset):
         self.candi_item_attention_mask = candi_item_attention_mask
 
     def tokenize_item_titles(self):
-        if os.path.exists(f'local_dataset/{self.args.dataset}/tokenized_{self.args.backbone}.pkl'):
-            tokenized = pickle.load(open(f'local_dataset/{self.args.dataset}/tokenized_{self.args.backbone}.pkl', 'rb'))
+        cache_suffix = f"_rich_{self.args.backbone}" if getattr(self.args, 'rich_metadata', False) else f"_{self.args.backbone}"
+        cache_path = f'local_dataset/{self.args.dataset}/tokenized{cache_suffix}.pkl'
+        if os.path.exists(cache_path):
+            tokenized = pickle.load(open(cache_path, 'rb'))
             self.item_title_tokens = tokenized['item_title_tokens']
             return
 
@@ -151,9 +153,21 @@ class DataSequential(Dataset):
         iid2asin = pickle.load(open(f"{self.args.data_path}/{self.args.dataset}/iid2asin.pkl", 'rb'))
         item_title_list = ['None'] * self.item_count
         for iid, asin in iid2asin.items():
-            item_title = item_metas[asin]['title'] if (
-                    'title' in item_metas[asin].keys() and item_metas[asin]['title']) else 'None'
-            item_title = item_title + '; '
+            meta = item_metas[asin]
+            if getattr(self.args, 'rich_metadata', False):
+                title = meta.get('title', 'None')
+                category = ", ".join(meta.get('category', [])) if isinstance(meta.get('category'), list) else str(meta.get('category', 'None'))
+                brand = meta.get('brand', 'None')
+                price = meta.get('price', 'None')
+                desc = meta.get('description', '')
+                if isinstance(desc, list):
+                    desc = " ".join(desc)
+                desc = desc[:200]  # truncate to avoid bloating token lengths
+                item_title = f"Title: {title}; Category: {category}; Brand: {brand}; Price: {price}; Description: {desc}; "
+            else:
+                item_title = meta.get('title', 'None') if (
+                        'title' in meta.keys() and meta['title']) else 'None'
+                item_title = item_title + '; '
             item_title_list[iid] = item_title
 
 
@@ -176,7 +190,7 @@ class DataSequential(Dataset):
             'item_title_tokens': self.item_title_tokens,
         }
         if self.args.rank == 0:
-            pickle.dump(tokenized, open(f'local_dataset/{self.args.dataset}/tokenized_{self.args.backbone}.pkl', 'wb'))
+            pickle.dump(tokenized, open(cache_path, 'wb'))
         else:
             time.sleep(10)
 
@@ -219,11 +233,11 @@ class DataSequential(Dataset):
             candi_item_input_ids = [0] * len(negative_items)
             candi_item_attention_mask = [0] * len(negative_items)
 
-        return [candi_item_input_ids, candi_item_attention_mask, sequence_attention_mask, sequence_input_ids, target_position, target_iid, negative_items]
+        return [candi_item_input_ids, candi_item_attention_mask, sequence_attention_mask, sequence_input_ids, target_position, target_iid, negative_items, seq_iid_list]
 
 
     def collate_fn(self, batch_data):
-        # candi_item_input_ids, candi_item_attention_mask, sequence_attention_mask, sequence_input_ids, target_position, target_iid, negative_items
+        # candi_item_input_ids, candi_item_attention_mask, sequence_attention_mask, sequence_input_ids, target_position, target_iid, negative_items, seq_iid_list
 
         item_input_ids = []
         item_attention_mask = []
@@ -233,8 +247,10 @@ class DataSequential(Dataset):
         target_iid = []
         example_index = []
         negative_items = []
+        seq_iids = []
 
         max_seq_length = max(len(x[2]) for x in batch_data)
+        max_iid_seq_length = max(len(x[7]) for x in batch_data)
 
         for example in batch_data:
             item_input_ids.extend(example[0])
@@ -246,6 +262,10 @@ class DataSequential(Dataset):
             target_position.append(example[4])
             target_iid.append(example[5])
             negative_items.append(example[6])
+            
+            iid_pad_len = max_iid_seq_length - len(example[7])
+            seq_iids.append(example[7] + iid_pad_len * [0])
+            
             example_index.append(example[-1])
 
         return {
@@ -256,7 +276,8 @@ class DataSequential(Dataset):
             'target_position': torch.LongTensor(target_position),
             'target_iid': torch.LongTensor(target_iid),
             'example_index': torch.LongTensor(example_index),
-            'negative_items': torch.LongTensor(negative_items)
+            'negative_items': torch.LongTensor(negative_items),
+            'seq_iids': torch.LongTensor(seq_iids)
         }
 
     def get_items_tokens(self):

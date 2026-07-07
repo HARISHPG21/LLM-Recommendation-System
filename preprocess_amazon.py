@@ -73,8 +73,11 @@ def download_file(dataset, local_path):
     if os.path.exists(local_path + f"/Ratings/{dataset}.csv"):
         return
     print("Download Amazon Review Files")
-    from alps.pytorch.api.utils.web_access import patch_requests
-    patch_requests()
+    try:
+        from alps.pytorch.api.utils.web_access import patch_requests
+        patch_requests()
+    except ImportError:
+        pass
     os.makedirs(local_path + f"/{dataset}", exist_ok=True)
     review_path = f"https://jmcauley.ucsd.edu/data/amazon_v2/categoryFiles/{dataset}.json.gz"
     meta_path = f"https://jmcauley.ucsd.edu/data/amazon_v2/metaFiles2/meta_{dataset}.json.gz"
@@ -402,7 +405,8 @@ def generate_negatives(dataset):
 
 if __name__ == '__main__':
     args = parse_args()
-    args.dataset = 'Scientific,Pantry,Instruments,Arts,Office'
+    if args.dataset == 'mSPIAO':
+        args.dataset = 'Gift'
     args.nega_count = 1000
     process(args.dataset)
     if len(args.dataset.split(',')) == 1:

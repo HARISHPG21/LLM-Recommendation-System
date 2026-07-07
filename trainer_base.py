@@ -44,7 +44,8 @@ class TrainerBase(object):
         lr_scheduler = None
 
         if 'adamw' in self.args.optim:
-            from transformers.optimization import AdamW, get_linear_schedule_with_warmup, get_constant_schedule
+            from torch.optim import AdamW
+            from transformers.optimization import get_linear_schedule_with_warmup, get_constant_schedule
 
             batch_per_epoch = len(self.train_loader)
             t_total = batch_per_epoch // self.args.gradient_accumulation_steps * self.args.epoch
@@ -118,7 +119,7 @@ class TrainerBase(object):
 
     def load(self, path, loc=None):
         if loc is None and hasattr(self.args, 'gpu'):
-            loc = f'cuda:{self.args.gpu}'
+            loc = self.args.gpu if self.args.gpu == 'cpu' else f'cuda:{self.args.gpu}'
         state_dict = torch.load("%s.pth" % path, map_location=loc)
         results = self.model.load_state_dict(state_dict, strict=False)
         if self.verbose:

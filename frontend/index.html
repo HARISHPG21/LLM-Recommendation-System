@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM-Rec: Domain-Agnostic Recommendation System Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Futuristic neural particle network background -->
+    <canvas id="bg-particle-canvas"></canvas>
+    
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon">LLM</div>
+                <h2>LLM-Rec</h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#simulator" class="nav-item active" id="nav-sim">
+                    <span class="icon">⚡</span> Simulator
+                </a>
+                <a href="#tsne" class="nav-item" id="nav-tsne">
+                    <span class="icon">🌀</span> t-SNE Projection
+                </a>
+                <a href="#heatmap" class="nav-item" id="nav-heatmap">
+                    <span class="icon">🔥</span> Transfer Heatmap
+                </a>
+                <a href="#backbones" class="nav-item" id="nav-models">
+                    <span class="icon">🧠</span> Backbone Explorer
+                </a>
+                <a href="#statistics" class="nav-item" id="nav-stats">
+                    <span class="icon">📊</span> Dataset Statistics
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <p class="pub-badge">TOIS Vol. 43, No. 5</p>
+                <p class="pub-year">July 2025</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-info">
+                    <h1>One Model for All: Large Language Models Are Domain-Agnostic Recommendation Systems</h1>
+                    <p class="authors">Zuoli Tang, Zhaoxin Huan, Zihao Li, Xiaolu Zhang, Jun Hu, Chilin Fu, Jun Zhou, Lixin Zou, and Chenliang Li</p>
+                </div>
+            </header>
+
+            <div class="content-scroll">
+                <!-- Section 1: Simulator -->
+                <section id="simulator" class="content-section">
+                    <div class="section-header">
+                        <h2>Multi-Domain Recommendation Simulator</h2>
+                        <p>Mix user behaviors from multiple domains chronologically and observe how LLM-Rec bridges semantic correlations across domains.</p>
+                    </div>
+
+                    <div class="simulator-layout">
+                        <!-- Left Panel: User History Sequence Builder -->
+                        <div class="card glass-card history-builder">
+                            <h3>1. Build User Interaction Timeline</h3>
+                            <p class="subtitle">Select items from different domains to construct a sequence of user history.</p>
+                            
+                            <div class="presets-container">
+                                <span>Presets:</span>
+                                <button class="btn btn-sm btn-outline" onclick="loadPreset('medical')">🩺 Medical Setup</button>
+                                <button class="btn btn-sm btn-outline" onclick="loadPreset('office_arts')">✏️ Writer & Crafter</button>
+                                <button class="btn btn-sm btn-outline" onclick="loadPreset('music_office')">🎸 Audio Engineer</button>
+                            </div>
+
+                            <div class="timeline-workspace">
+                                <div class="timeline-empty" id="timeline-empty-msg">
+                                    <p>Timeline is empty. Select items below or load a preset to start.</p>
+                                </div>
+                                <div class="timeline-flow" id="timeline-flow">
+                                    <!-- Items will be inserted here dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="add-item-controls">
+                                <h4>Add Item to Timeline</h4>
+                                <div class="control-row">
+                                    <div class="select-group">
+                                        <label for="item-domain">Domain</label>
+                                        <select id="item-domain" onchange="updateItemOptions()">
+                                            <option value="Scientific">Industrial & Scientific</option>
+                                            <option value="Office">Office Products</option>
+                                            <option value="Instruments">Musical Instruments</option>
+                                            <option value="Pantry">Prime Pantry</option>
+                                        </select>
+                                    </div>
+                                    <div class="select-group item-select-group">
+                                        <label for="item-title">Product Item</label>
+                                        <select id="item-title">
+                                            <!-- Dynamically filled -->
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="addItemToTimeline()">+ Add to History</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Recommendation Inference Output -->
+                        <div class="card glass-card inference-panel">
+                            <h3>2. Run LLM-Rec Prediction</h3>
+                            <div class="target-domain-selector">
+                                <label for="target-domain">Target Domain for Recommendation:</label>
+                                <select id="target-domain">
+                                    <option value="Arts">Arts, Crafts & Sewing</option>
+                                    <option value="Instruments">Musical Instruments</option>
+                                    <option value="Scientific">Industrial & Scientific</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-accent btn-large" id="btn-predict" onclick="runPrediction()">
+                                <span class="spinner" id="predict-spinner"></span> Predict Next Liked Product
+                            </button>
+
+                            <div class="inference-output" id="inference-output-area" style="display: none;">
+                                <div class="recommendation-result">
+                                    <div class="glow-box">
+                                        <span class="label">RECOMMENDED ITEM (Target: <span id="out-target-domain"></span>)</span>
+                                        <h2 id="recommended-item-title">Ever Ready Titanium Bonded Bandage Shears</h2>
+                                        <p class="rec-desc">A highly specialized tool suited to the user's blended interests in Medical supplies and crafting.</p>
+                                    </div>
+                                </div>
+
+                                <div class="gating-visualization">
+                                    <h4>Dynamic Collaborative-Semantic Gating ($\sigma$)</h4>
+                                    <div class="gate-bars">
+                                        <div class="gate-bar semantic-gate" id="semantic-bar" style="width: 75%;">
+                                            <span class="percentage">75%</span>
+                                            <span class="bar-label">Semantic LLM Knowledge</span>
+                                        </div>
+                                        <div class="gate-bar collaborative-gate" id="collaborative-bar" style="width: 25%;">
+                                            <span class="percentage">25%</span>
+                                            <span class="bar-label">Collaborative Filtering</span>
+                                        </div>
+                                    </div>
+                                    <p class="explanation-text" id="gating-explanation">
+                                        The LLM identified strong semantic connections between stethoscopes (Scientific) and crafting items, relying heavily on world knowledge.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 3: Interactive Sandbox & Model Architecture Flow Visualizer -->
+                    <div class="card glass-card sandbox-panel">
+                        <div class="sandbox-header">
+                            <h3>3. Interactive Gating Sandbox & Model Architecture Flow</h3>
+                            <p class="subtitle">Witness how user history flows through the dual-encoders, and manually tune the gating network weight to see candidates reranked in real-time.</p>
+                        </div>
+                        
+                        <div class="sandbox-layout">
+                            <!-- Left: Model Architecture Information Flow Diagram -->
+                            <div class="arch-visualizer">
+                                <h4>Model Architecture Information Flow</h4>
+                                <div class="arch-nodes-container">
+                                    <div class="arch-node" id="node-history">
+                                        <div class="node-icon">⏱️</div>
+                                        <span>User History Sequence</span>
+                                    </div>
+                                    <div class="arch-connector" id="conn-split">
+                                        <div class="pulse-particle"></div>
+                                    </div>
+                                    <div class="arch-branches">
+                                        <div class="arch-branch-row">
+                                            <div class="arch-node branch-node" id="node-llm">
+                                                <div class="node-icon">🤖</div>
+                                                <span>LLM Text Projector (Semantic)</span>
+                                            </div>
+                                            <div class="arch-connector" id="conn-llm-gate">
+                                                <div class="pulse-particle"></div>
+                                            </div>
+                                        </div>
+                                        <div class="arch-branch-row">
+                                            <div class="arch-node branch-node" id="node-gru">
+                                                <div class="node-icon">📈</div>
+                                                <span>GRU ID Sequence (Collab)</span>
+                                            </div>
+                                            <div class="arch-connector" id="conn-gru-gate">
+                                                <div class="pulse-particle"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="arch-node" id="node-gate">
+                                        <div class="node-icon">⚖️</div>
+                                        <span>Gating Network (σ)</span>
+                                    </div>
+                                    <div class="arch-connector" id="conn-output">
+                                        <div class="pulse-particle"></div>
+                                    </div>
+                                    <div class="arch-node" id="node-output">
+                                        <div class="node-icon">🎁</div>
+                                        <span>Reranked Output</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right: Gating Control & Reranking List -->
+                            <div class="gating-sandbox-controls">
+                                <h4>Interactive Gating Parameter Control</h4>
+                                <div class="sandbox-slider-area">
+                                    <div class="slider-labels">
+                                        <span>100% Semantic (g = 0.0)</span>
+                                        <span>100% Collaborative (g = 1.0)</span>
+                                    </div>
+                                    <input type="range" min="0" max="1" step="0.01" value="0.5" class="sandbox-slider" id="sandbox-gate-slider" disabled>
+                                    <div class="current-gate-value">
+                                        <span>Current Gate Weight (g): </span>
+                                        <strong id="sandbox-gate-val-text">0.5000</strong>
+                                        <span class="mode-badge" id="sandbox-mode-badge">Auto (Model Resolved)</span>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline" id="btn-manual-override" onclick="toggleManualOverride()" disabled>🔧 Enable Manual Tuning Override</button>
+                                </div>
+                                
+                                <div class="sandbox-results-area">
+                                    <h5>Real-Time Target Candidates Rerank List:</h5>
+                                    <div class="sandbox-rerank-list" id="sandbox-rerank-list">
+                                        <div class="rerank-list-placeholder">Run a prediction above to load candidates.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: t-SNE Projection Visualizer -->
+                <section id="tsne" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>Interactive t-SNE Embedding Space</h2>
+                        <p>Compare the item representations learned by a standard ID-based model (IDRec/SASRec) vs. our text-based LLM-Rec. Notice how LLM-Rec forms distinct domain-agnostic semantic clusters (Figure 10).</p>
+                    </div>
+
+                    <div class="tsne-container card glass-card">
+                        <div class="tsne-controls">
+                            <button class="btn btn-outline active" id="btn-tsne-llm" onclick="toggleTsneMode('llm')">LLM-Rec (Semantic Embedding)</button>
+                            <button class="btn btn-outline" id="btn-tsne-id" onclick="toggleTsneMode('id')">IDRec / SASRec (ID Embedding)</button>
+                            <div class="legend">
+                                <span class="legend-item"><span class="dot color-scientific"></span> Scientific</span>
+                                <span class="legend-item"><span class="dot color-pantry"></span> Pantry</span>
+                                <span class="legend-item"><span class="dot color-instruments"></span> Instruments</span>
+                                <span class="legend-item"><span class="dot color-arts"></span> Arts</span>
+                                <span class="legend-item"><span class="dot color-office"></span> Office</span>
+                            </div>
+                            <div class="tsne-search-box">
+                                <input type="text" id="tsne-search-input" placeholder="🔍 Search items (e.g. pen, mic)..." oninput="handleTsneSearch(this.value)">
+                            </div>
+                        </div>
+
+                        <div class="canvas-wrapper">
+                            <canvas id="tsne-canvas" width="800" height="500"></canvas>
+                            <div class="canvas-tooltip" id="canvas-tooltip">
+                                <div class="tooltip-title">Mock Item</div>
+                                <div class="tooltip-domain">Domain</div>
+                                <div class="tooltip-freq">Frequency: Tail</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Backbone Explorer -->
+                <section id="backbones" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>Backbone & Scaling Law Explorer</h2>
+                        <p>Explore different language model backbones and see how parameter size affects zero-shot recommendation accuracy and inference latency.</p>
+                    </div>
+
+                    <div class="backbone-explorer-layout">
+                        <!-- Model Selection Sidebar -->
+                        <div class="card glass-card model-selector-card">
+                            <h3>Select Backbone Model</h3>
+                            <div class="model-cards-grid">
+                                <div class="model-spec-card active" onclick="selectBackbone('bert-base', this)">
+                                    <h4>BERT-Base</h4>
+                                    <span class="badge badge-encoder">Encoder-Only</span>
+                                    <p class="params">110M Parameters</p>
+                                </div>
+                                <div class="model-spec-card" onclick="selectBackbone('opt-125m', this)">
+                                    <h4>OPT-125M</h4>
+                                    <span class="badge badge-decoder">Decoder-Only</span>
+                                    <p class="params">125M Parameters</p>
+                                </div>
+                                <div class="model-spec-card" onclick="selectBackbone('flan-t5', this)">
+                                    <h4>FLAN-T5-Base</h4>
+                                    <span class="badge badge-encdec">Encoder-Decoder</span>
+                                    <p class="params">250M Parameters</p>
+                                </div>
+                                <div class="model-spec-card" onclick="selectBackbone('opt-1.3b', this)">
+                                    <h4>OPT-1.3B</h4>
+                                    <span class="badge badge-decoder">Decoder-Only</span>
+                                    <p class="params">1.3B Parameters</p>
+                                </div>
+                                <div class="model-spec-card" onclick="selectBackbone('opt-6.7b', this)">
+                                    <h4>OPT-6.7B</h4>
+                                    <span class="badge badge-decoder">Decoder-Only</span>
+                                    <p class="params">6.7B Parameters</p>
+                                </div>
+                            </div>
+                            
+                            <div class="compare-mode-container">
+                                <label class="switch-label">
+                                    <input type="checkbox" id="compare-mode-checkbox" onchange="toggleCompareMode(this.checked)">
+                                    <span>Compare with another model</span>
+                                </label>
+                                <select id="compare-model-select" class="compare-select" onchange="selectCompareBackbone(this.value)" disabled>
+                                    <option value="">-- Choose second model --</option>
+                                    <option value="bert-base">BERT-Base (110M)</option>
+                                    <option value="opt-125m">OPT-125M (125M)</option>
+                                    <option value="flan-t5">FLAN-T5-Base (250M)</option>
+                                    <option value="opt-1.3b">OPT-1.3B (1.3B)</option>
+                                    <option value="opt-6.7b">OPT-6.7B (6.7B)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Stats Display -->
+                        <div class="card glass-card model-metrics-card">
+                            <h3 id="selected-model-name">BERT-Base</h3>
+                            
+                            <!-- Normal Metrics Grid -->
+                            <div class="metrics-grid" id="metrics-grid-normal">
+                                <div class="metric-val-card">
+                                    <span class="label">Average Recall@10</span>
+                                    <h2 id="metric-recall">25.61%</h2>
+                                    <span class="subtext">On Scientific domain</span>
+                                </div>
+                                <div class="metric-val-card">
+                                    <span class="label">Inference Latency</span>
+                                    <h2 id="metric-latency">7.3 ms</h2>
+                                    <span class="subtext">Single example (batch size 1)</span>
+                                </div>
+                                <div class="metric-val-card">
+                                    <span class="label">Zero-Shot capability</span>
+                                    <h2 id="metric-zeroshot">Moderate</h2>
+                                    <span class="subtext">On Food & Home datasets</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Compare Metrics Grid -->
+                            <div class="compare-metrics-grid" id="metrics-grid-compare" style="display: none;">
+                                <div class="compare-column" id="compare-col-1">
+                                    <h4 id="compare-model-1-title">Model 1</h4>
+                                    <div class="metric-val-card">
+                                        <span class="label">Average Recall@10</span>
+                                        <h3 id="compare-recall-1">25.61%</h3>
+                                    </div>
+                                    <div class="metric-val-card">
+                                        <span class="label">Inference Latency</span>
+                                        <h3 id="compare-latency-1">7.3 ms</h3>
+                                    </div>
+                                </div>
+                                <div class="compare-column" id="compare-col-2">
+                                    <h4 id="compare-model-2-title">Model 2</h4>
+                                    <div class="metric-val-card">
+                                        <span class="label">Average Recall@10</span>
+                                        <h3 id="compare-recall-2">-</h3>
+                                    </div>
+                                    <div class="metric-val-card">
+                                        <span class="label">Inference Latency</span>
+                                        <h3 id="compare-latency-2">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Chart -->
+                            <div class="chart-container">
+                                <h4>Inference Latency vs. User Sequence Length (Figure 14)</h4>
+                                <div class="bar-chart-visual" id="latency-chart">
+                                    <!-- Bars dynamically sized -->
+                                    <div class="chart-axis-y">
+                                        <span>25ms</span>
+                                        <span>20ms</span>
+                                        <span>15ms</span>
+                                        <span>10ms</span>
+                                        <span>5ms</span>
+                                        <span>0ms</span>
+                                    </div>
+                                    <div class="chart-bars-flow" id="chart-bars-flow">
+                                        <!-- Dynamic bars -->
+                                    </div>
+                                </div>
+                                <div class="chart-axis-x" id="chart-axis-x">
+                                    <!-- Dynamic labels -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Cross-Domain Transfer Heatmap -->
+                <section id="heatmap" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>Cross-Domain Transfer Heatmap</h2>
+                        <p>Explore the transferability scores (Recall@10 improvement %) when learning representation transitions between different source domains and target domains.</p>
+                    </div>
+
+                    <div class="card glass-card heatmap-card">
+                        <div class="heatmap-header">
+                            <h3>Domain Transfer Synergy Grid</h3>
+                            <p class="subtitle">Click over cells to inspect semantic overlap ratios and gating alignment metrics.</p>
+                        </div>
+                        <div class="heatmap-layout-container">
+                            <div class="heatmap-y-label">Source Domain (User History)</div>
+                            <div class="heatmap-wrapper">
+                                <div class="heatmap-x-label">Target Domain (Recommendation Target)</div>
+                                <div class="heatmap-grid-container" id="heatmap-grid">
+                                    <!-- Dynamic Heatmap Cells -->
+                                </div>
+                            </div>
+                            <div class="heatmap-legend-bar">
+                                <span>Low Synergy (+0%)</span>
+                                <div class="heatmap-legend-gradient"></div>
+                                <span>High Synergy (+40%)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="heatmap-details-panel" id="heatmap-details">
+                            <h4 id="heatmap-detail-title">Hover over a grid cell to inspect transfer characteristics</h4>
+                            <div class="heatmap-detail-stats" id="heatmap-detail-stats" style="display: none;">
+                                <div class="heatmap-stat-card">
+                                    <span class="label">Recall Improvement</span>
+                                    <h3 id="heatmap-stat-recall">+0.0%</h3>
+                                </div>
+                                <div class="heatmap-stat-card">
+                                    <span class="label">Semantic Similarity</span>
+                                    <h3 id="heatmap-stat-sim">0.00</h3>
+                                </div>
+                                <div class="heatmap-stat-card">
+                                    <span class="label">Overlap Users</span>
+                                    <h3 id="heatmap-stat-users">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 4: Dataset Statistics -->
+                <section id="statistics" class="content-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>Dataset Statistics & Domain Overlap</h2>
+                        <p>Historical statistics of the processed SPAIO datasets constructed from Amazon Review Data (2018).</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="card glass-card">
+                            <h3>Table 1: Dataset General Statistics</h3>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Dataset</th>
+                                        <th># Users</th>
+                                        <th># Items</th>
+                                        <th># Interactions</th>
+                                        <th># Training</th>
+                                        <th># Testing</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Scientific</td>
+                                        <td>142,139</td>
+                                        <td>14,586</td>
+                                        <td>329,123</td>
+                                        <td>244,960</td>
+                                        <td>43,365</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pantry</td>
+                                        <td>55,890</td>
+                                        <td>6,224</td>
+                                        <td>208,791</td>
+                                        <td>162,762</td>
+                                        <td>22,412</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Instruments</td>
+                                        <td>88,249</td>
+                                        <td>14,626</td>
+                                        <td>348,513</td>
+                                        <td>274,760</td>
+                                        <td>36,129</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Arts</td>
+                                        <td>184,207</td>
+                                        <td>32,196</td>
+                                        <td>723,017</td>
+                                        <td>568,600</td>
+                                        <td>76,035</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Office</td>
+                                        <td>259,687</td>
+                                        <td>37,380</td>
+                                        <td>1,154,924</td>
+                                        <td>893,014</td>
+                                        <td>132,195</td>
+                                    </tr>
+                                    <tr class="highlight-row">
+                                        <td>SPIAO (Total)</td>
+                                        <td>310,136</td>
+                                        <td>105,012</td>
+                                        <td>2,764,368</td>
+                                        <td>2,144,096</td>
+                                        <td>310,136</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="card glass-card">
+                            <h3>Table 3: Users Active Across Domains</h3>
+                            <div class="domain-users-dist">
+                                <div class="dist-row">
+                                    <span class="label">1 Domain Only</span>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-fill" style="width: 17.1%;"></div>
+                                    </div>
+                                    <span class="val">53,117 users</span>
+                                </div>
+                                <div class="dist-row">
+                                    <span class="label">2 Domains</span>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-fill" style="width: 41.7%;"></div>
+                                    </div>
+                                    <span class="val">129,352 users</span>
+                                </div>
+                                <div class="dist-row">
+                                    <span class="label">3 Domains</span>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-fill" style="width: 30.9%;"></div>
+                                    </div>
+                                    <span class="val">95,719 users</span>
+                                </div>
+                                <div class="dist-row">
+                                    <span class="label">4 Domains</span>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-fill" style="width: 9.2%;"></div>
+                                    </div>
+                                    <span class="val">28,546 users</span>
+                                </div>
+                                <div class="dist-row">
+                                    <span class="label">5 Domains</span>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-fill" style="width: 1.1%;"></div>
+                                    </div>
+                                    <span class="val">3,402 users</span>
+                                </div>
+                            </div>
+                            <p class="subtitle" style="margin-top: 15px;">Over 80% of the active users interact across multiple categories, highlighting the value of domain-agnostic recommendation.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

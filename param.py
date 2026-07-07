@@ -82,7 +82,7 @@ def parse_args(parse=True, **optional_kwargs):
     parser.add_argument("--num_nodes", default=1, type=int)
     parser.add_argument('--local_rank', type=int, default=-1)
     parser.add_argument('--port', type=int, default=12347)
-    parser.add_argument('--valid_ratio', type=float, default=1.0)
+    parser.add_argument('--valid_ratio', type=float, default=0.1)
 
     # Model Config
     parser.add_argument('--lora', action='store_true')
@@ -94,6 +94,13 @@ def parse_args(parse=True, **optional_kwargs):
     parser.add_argument('--data_path', type=str, default='dataset')
     parser.add_argument('--num_works', type=int, default=4)
     parser.add_argument('--item_emb_dim', type=int, default=128)
+    parser.add_argument('--model_type', type=str, default='llm', choices=['llm', 'hybrid'], help='Model type: llm or hybrid')
+    parser.add_argument('--rich_metadata', type=str2bool, default=False, help='Use multi-attribute metadata for items')
+    parser.add_argument('--use_dora', action='store_true', help='Use DoRA instead of LoRA')
+    parser.add_argument('--qlora', action='store_true', help='Use 4-bit QLoRA quantization')
+    parser.add_argument('--flash_attn', action='store_true', help='Use FlashAttention-2 / SDPA')
+    parser.add_argument('--cache_item_embs', type=str2bool, default=False, help='Cache item embeddings to accelerate validation/testing')
+    parser.add_argument('--zero_shot_eval', action='store_true', help='Bypass training and run zero-shot evaluation on target dataset')
 
     # Lora Config
     parser.add_argument('--lora_r', type=int, default=16)
@@ -144,11 +151,25 @@ def parse_args(parse=True, **optional_kwargs):
     np.random.seed(args.seed)
     
     # 配置args
-    args.fp16 = True
+    if not torch.cuda.is_available():
+        args.fp16 = False
+        args.distributed = False
+        args.multiGPU = False
+        args.num_gpus = 1
+    else:
+        args.fp16 = True
+        args.distributed = True
+        args.multiGPU = True
     args.valid_first = True
-    args.distributed = True
-    args.multiGPU = True
-    args.valid_ratio = 0.1
+
+    # Resolve local model path or fall back to Hugging Face
+    import os
+    local_path = os.path.join(args.root_path, args.backbone)
+    if not os.path.exists(local_path) and not os.path.exists(args.root_path + args.backbone):
+        args.root_path = ""
+    else:
+        if os.path.isdir(args.root_path) and not args.root_path.endswith('/') and not args.root_path.endswith('\\'):
+            args.root_path = args.root_path + '/'
 
     import math
     args.gradient_accumulation_steps = math.ceil(96 / args.batch_size / args.num_gpus)

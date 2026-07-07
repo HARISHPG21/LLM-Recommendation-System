@@ -56,7 +56,21 @@ class Trainer(TrainerBase):
             print_rank0(f"Load model from epoch {self.start_epoch}!", self.args.rank)
             self.load(self.args.output.format('valid_best'))
 
+    @property
+    def device_type(self):
+        return 'cuda' if next(self.model.parameters()).is_cuda else 'cpu'
+
+    @property
+    def autocast_dtype(self):
+        return torch.float16 if self.device_type == 'cuda' else torch.bfloat16
+
     def train(self):
+        if getattr(self.args, 'zero_shot_eval', False):
+            print_rank0("Zero-Shot Evaluation Mode Activated!", self.args.rank)
+            if not self.args.skip_valid:
+                self.valid_epoch('Zero-Shot Valid', mode='valid')
+            self.valid_epoch('Zero-Shot Test', mode='test')
+            return
 
         if self.args.distributed:
             dist.barrier()
@@ -70,7 +84,7 @@ class Trainer(TrainerBase):
                 return
 
         global_step = 1
-        scaler = GradScaler()
+        scaler = GradScaler(enabled=self.args.fp16)
         result = {'exit': False}
 
         for epoch in range(self.args.epoch):
@@ -85,7 +99,7 @@ class Trainer(TrainerBase):
             for step_i, batch in enumerate(tqdm(self.train_loader, desc='Training')):
                 self.transfer_device(batch)
 
-                with autocast(device_type='cuda', dtype=torch.float16, enabled=self.args.fp16):
+                with autocast(device_type=self.device_type, dtype=self.autocast_dtype, enabled=self.args.fp16):
                     losses = self.model(batch)
                     loss = losses[0] / self.args.gradient_accumulation_steps
                 scaler.scale(loss).backward()
@@ -153,7 +167,7 @@ class Trainer(TrainerBase):
     def valid_epoch(self, epoch, mode='valid'):
         dataloader = self.val_loader if mode == 'valid' else self.test_loader
         self.model.eval()
-        with autocast(device_type='cuda', dtype=torch.float16, enabled=self.args.fp16):
+        with autocast(device_type=self.device_type, dtype=self.autocast_dtype, enabled=self.args.fp16):
             if self.args.distributed:
                 self.model.module.generate_embs(dataloader.dataset.get_items_tokens())
                 dist.barrier()
@@ -169,7 +183,7 @@ class Trainer(TrainerBase):
             self.transfer_device(batch_data)
             if (batch_idx % logger_batch) == 0:
                 print_rank0(f"Local Rank{self.args.rank}-Evaluation:{batch_idx}/{loader_length}", self.args.rank)
-            with autocast(device_type='cuda', dtype=torch.float16, enabled=self.args.fp16):
+            with autocast(device_type=self.device_type, dtype=self.autocast_dtype, enabled=self.args.fp16):
                 if self.args.distributed:
                     scores, _ = self.model.module.valid_step(batch_data)
                 else:
@@ -219,7 +233,7 @@ class Trainer(TrainerBase):
         perf_str = perf_str + f"Recall@1:{recall_1}\n"
         print_rank0(f'Overall Recall:{recall}', self.args.rank)
 
-        if recall_1 > self.best_valid_result:
+        if recall_1 >= self.best_valid_result:
             self.early_stop_step = 0
             self.best_valid_result = recall_1
         else:
@@ -293,9 +307,14 @@ class Trainer(TrainerBase):
 
 def main_worker(gpu, args):
 
-    args.gpu = gpu
-    args.rank = gpu
-    print_rank0(f'Process Launching at GPU {gpu}')
+    if not torch.cuda.is_available():
+        args.gpu = 'cpu'
+        args.rank = 0
+        print_rank0('Process Launching on CPU')
+    else:
+        args.gpu = gpu
+        args.rank = gpu
+        print_rank0(f'Process Launching at GPU {gpu}')
 
     if args.distributed:
         torch.cuda.set_device(args.gpu)
@@ -315,10 +334,17 @@ def main_worker(gpu, args):
     elif 'flan' in args.backbone:
         from transformers import T5Tokenizer
         tokenizer = T5Tokenizer.from_pretrained(args.root_path + args.backbone)
+    elif any(x in args.backbone.lower() for x in ['llama', 'gemma', 'mistral']):
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(args.root_path + args.backbone)
+        # Ensure padding token is set for causal models
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
     else:
         raise NotImplementedError
 
     train_loader, valid_loader, test_loader = get_dataloader(args, tokenizer)
+    args.item_count = train_loader.dataset.item_count
 
     trainer = Trainer(args, tokenizer, train_loader, valid_loader, test_loader, train=True)
     trainer.train()
