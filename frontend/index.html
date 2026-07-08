@@ -8,6 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <script>
+        if (localStorage.getItem("theme") === "light") {
+            document.body.classList.add("light-theme");
+        }
+    </script>
     <!-- Futuristic neural particle network background -->
     <canvas id="bg-particle-canvas"></canvas>
     
@@ -45,9 +50,14 @@
         <main class="main-content">
             <!-- Top Header -->
             <header class="top-header">
-                <div class="header-info">
-                    <h1>One Model for All: Large Language Models Are Domain-Agnostic Recommendation Systems</h1>
-                    <p class="authors">Zuoli Tang, Zhaoxin Huan, Zihao Li, Xiaolu Zhang, Jun Hu, Chilin Fu, Jun Zhou, Lixin Zou, and Chenliang Li</p>
+                <div class="header-info-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="header-info">
+                        <h1>One Model for All: Large Language Models Are Domain-Agnostic Recommendation Systems</h1>
+                        <p class="authors">Zuoli Tang, Zhaoxin Huan, Zihao Li, Xiaolu Zhang, Jun Hu, Chilin Fu, Jun Zhou, Lixin Zou, and Chenliang Li</p>
+                    </div>
+                    <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
+                        <span class="theme-icon">☀️</span>
+                    </button>
                 </div>
             </header>
 

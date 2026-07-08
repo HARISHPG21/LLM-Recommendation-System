@@ -14,6 +14,11 @@
     --text-primary: #e2e8f0;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
+    --bg-sidebar: rgba(10, 15, 30, 0.85);
+    --bg-header: rgba(9, 13, 22, 0.5);
+    --bg-tsne-canvas: rgba(5, 7, 15, 0.8);
+    --bg-timeline-workspace: rgba(0, 0, 0, 0.2);
+    --bg-select: rgba(10, 15, 30, 0.6);
     
     /* Neon Domain Colors */
     --color-scientific: #38bdf8; /* sky blue */
@@ -44,7 +49,7 @@ body {
 /* Sidebar Styling */
 .sidebar {
     width: 280px;
-    background-color: rgba(10, 15, 30, 0.85);
+    background-color: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -154,7 +159,7 @@ body {
 .top-header {
     padding: 30px 40px;
     border-bottom: 1px solid var(--border-color);
-    background-color: rgba(9, 13, 22, 0.5);
+    background-color: var(--bg-header);
     backdrop-filter: blur(10px);
     z-index: 5;
 }
@@ -287,8 +292,9 @@ body {
 /* Form Controls & Selectors */
 select {
     width: 100%;
-    padding: 12px;
-    background-color: rgba(10, 15, 30, 0.6);
+    height: 46px;
+    padding: 0 12px;
+    background-color: var(--bg-select);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     color: var(--text-primary);
@@ -324,6 +330,11 @@ select:focus {
     margin-top: 20px;
 }
 
+.control-row .btn {
+    height: 46px;
+    padding: 0 24px;
+}
+
 .item-select-group {
     flex: 2;
 }
@@ -348,13 +359,13 @@ select:focus {
 }
 
 .timeline-workspace {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--bg-timeline-workspace);
     border: 1px dashed var(--border-color);
     border-radius: 15px;
     min-height: 180px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 20px;
     margin-bottom: 25px;
     position: relative;
@@ -364,6 +375,7 @@ select:focus {
 .timeline-empty {
     color: var(--text-muted);
     font-size: 15px;
+    margin: auto;
 }
 
 .timeline-flow {
@@ -588,7 +600,7 @@ select:focus {
 
 .canvas-wrapper {
     position: relative;
-    background-color: rgba(5, 7, 15, 0.8);
+    background-color: var(--bg-tsne-canvas);
     border: 1px solid var(--border-color);
     border-radius: 15px;
     overflow: hidden;
@@ -1552,12 +1564,12 @@ select:focus {
     font-weight: 700;
 }
 
-/* --- Timeline Sorting Buttons --- */
 .timeline-item-controls {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-left: 10px;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
     z-index: 20;
 }
 
@@ -1701,6 +1713,17 @@ select:focus {
         gap: 15px;
     }
     
+    .control-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .control-row .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
     .compare-metrics-grid {
         grid-template-columns: 1fr;
         gap: 15px;
@@ -1753,6 +1776,162 @@ select:focus {
         width: 100%;
         justify-content: flex-end;
     }
+}
+
+/* --- Theme Toggle Button --- */
+.theme-toggle-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--card-shadow);
+    color: var(--text-primary);
+    flex-shrink: 0;
+    margin-left: 20px;
+    outline: none;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--color-accent);
+    transform: rotate(15deg) scale(1.05);
+}
+
+.theme-toggle-btn:active {
+    transform: scale(0.95);
+}
+
+/* --- Light Theme Support --- */
+.light-theme {
+    --bg-main: #f1f5f9;
+    --bg-card: rgba(255, 255, 255, 0.7);
+    --bg-card-hover: rgba(255, 255, 255, 0.95);
+    --border-color: rgba(15, 23, 42, 0.08);
+    --border-color-glow: rgba(0, 210, 254, 0.4);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --bg-sidebar: rgba(255, 255, 255, 0.9);
+    --bg-header: rgba(255, 255, 255, 0.5);
+    --bg-tsne-canvas: rgba(255, 255, 255, 0.85);
+    --bg-timeline-workspace: rgba(15, 23, 42, 0.04);
+    --bg-select: rgba(255, 255, 255, 0.95);
+    --card-shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.12);
+}
+
+/* Light Theme Element Overrides */
+.light-theme .sidebar {
+    background-color: var(--bg-sidebar);
+}
+
+.light-theme .top-header {
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.light-theme .top-header h1 {
+    color: var(--text-primary);
+}
+
+.light-theme .brand h2 {
+    background: linear-gradient(to right, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.light-theme .nav-item:hover {
+    color: var(--text-primary);
+    background-color: rgba(15, 23, 42, 0.04);
+    border-color: rgba(15, 23, 42, 0.06);
+}
+
+.light-theme .timeline-workspace {
+    background-color: var(--bg-timeline-workspace);
+    border-color: var(--border-color);
+}
+
+.light-theme .timeline-item {
+    background: rgba(255, 255, 255, 0.8);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.light-theme .timeline-item .btn-remove:hover {
+    color: #ff3333;
+}
+
+.light-theme .canvas-wrapper {
+    background-color: var(--bg-tsne-canvas);
+    border-color: var(--border-color);
+}
+
+.light-theme .canvas-tooltip {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-color: var(--border-color);
+    box-shadow: 0 4px 15px rgba(15, 23, 42, 0.1);
+}
+
+.light-theme .tooltip-title {
+    color: var(--text-primary);
+}
+
+.light-theme .arch-visualizer {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: var(--border-color);
+}
+
+.light-theme .arch-node {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--border-color);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.light-theme .arch-connector {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.light-theme .arch-connector::before {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.light-theme .data-table td {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.light-theme .data-table tbody tr:hover td {
+    color: var(--text-primary);
+    background-color: rgba(15, 23, 42, 0.02);
+}
+
+.light-theme .btn-outline {
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.light-theme .btn-outline:hover, .light-theme .btn-outline.active {
+    background-color: rgba(15, 23, 42, 0.05);
+}
+
+.light-theme .gate-bars {
+    border-color: var(--border-color);
+}
+
+.light-theme .bar-chart-visual {
+    border-left: 2px solid var(--border-color);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.light-theme .chart-axis-y {
+    border-right: 1px solid var(--border-color);
 }
 
 

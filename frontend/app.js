@@ -326,7 +326,8 @@ function drawTsne() {
     ctx.clearRect(0, 0, tsneCanvas.width, tsneCanvas.height);
     
     // Draw background grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+    const isLight = document.body.classList.contains('light-theme');
+    ctx.strokeStyle = isLight ? 'rgba(15, 23, 42, 0.05)' : 'rgba(255, 255, 255, 0.02)';
     ctx.lineWidth = 1;
     for (let x = 0; x < tsneCanvas.width; x += 40) {
         ctx.beginPath();
@@ -366,7 +367,7 @@ function drawTsne() {
             
             // Draw text title right above it
             ctx.font = "bold 9px sans-serif";
-            ctx.fillStyle = "#fff";
+            ctx.fillStyle = isLight ? '#0f172a' : '#fff';
             ctx.textAlign = "center";
             ctx.fillText(p.title.split("#")[0].trim(), p.cx, p.cy - 12);
         }
@@ -1109,7 +1110,7 @@ function initHeatmap() {
             
             if (rIdx === cIdx) {
                 cell.className = "heatmap-cell data-cell";
-                cell.style.background = "rgba(255,255,255,0.03)";
+                cell.style.background = document.body.classList.contains('light-theme') ? "rgba(15, 23, 42, 0.05)" : "rgba(255,255,255,0.03)";
                 cell.innerHTML = `
                     <span class="val-pct">-</span>
                     <span class="sub-val">Self</span>
@@ -1126,9 +1127,13 @@ function initHeatmap() {
                 cell.className = "heatmap-cell data-cell";
                 cell.style.backgroundColor = `rgba(0, 242, 254, ${alpha})`;
                 
+                const isLight = document.body.classList.contains('light-theme');
+                const textColor = isLight ? '#0f172a' : (alpha > 0.45 ? '#000' : '#fff');
+                const subColor = isLight ? 'rgba(15, 23, 42, 0.7)' : (alpha > 0.45 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.5)');
+                
                 cell.innerHTML = `
-                    <span class="val-pct" style="color: ${alpha > 0.45 ? '#000' : '#fff'}">+${val.toFixed(1)}%</span>
-                    <span class="sub-val" style="color: ${alpha > 0.45 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.5)'}">Synergy</span>
+                    <span class="val-pct" style="color: ${textColor}">+${val.toFixed(1)}%</span>
+                    <span class="sub-val" style="color: ${subColor}">Synergy</span>
                 `;
                 cell.onmouseenter = () => {
                     if (!selectedHeatmapCell) showHeatmapDetails(sourceD, targetD, cellData);
@@ -1167,8 +1172,42 @@ function hideHeatmapDetails() {
     document.getElementById("heatmap-detail-stats").style.display = "none";
 }
 
+// --- Theme Toggle Control ---
+function initTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    const themeIcon = document.querySelector(".theme-icon");
+    if (savedTheme === "light") {
+        document.body.classList.add("light-theme");
+        if (themeIcon) themeIcon.textContent = "🌙";
+    } else {
+        document.body.classList.remove("light-theme");
+        if (themeIcon) themeIcon.textContent = "☀️";
+    }
+}
+
+function toggleTheme() {
+    const isLight = document.body.classList.toggle("light-theme");
+    localStorage.setItem("theme", isLight ? "light" : "dark");
+    const themeIcon = document.querySelector(".theme-icon");
+    if (themeIcon) {
+        themeIcon.textContent = isLight ? "🌙" : "☀️";
+    }
+    // Redraw active views to reflect theme updates
+    if (typeof drawTsne === "function") {
+        drawTsne();
+    }
+    if (typeof initHeatmap === "function") {
+        initHeatmap();
+    }
+}
+
+// Bind to window to allow HTML onclick access
+window.toggleTheme = toggleTheme;
+window.initTheme = initTheme;
+
 // Initializations
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     initBgParticles();
     initTiltEffects();
     
